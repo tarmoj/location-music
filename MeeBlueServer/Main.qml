@@ -113,6 +113,23 @@ ApplicationWindow {
       }
    }
 
+   WebSocketServer {
+      id: server
+      listen: true
+      port: 6789
+      host: "0.0.0.0"
+
+      onClientConnected: function(webSocket) {
+         webSocket.onTextMessageReceived.connect(function(message) {
+            console.log(qsTr("Server received message: %1").arg(message));
+            webSocket.sendTextMessage(qsTr("Hello Client!"));
+         });
+      }
+      onErrorStringChanged: {
+         console.log(qsTr("Server error: %1").arg(errorString));
+      }
+   }
+
 
 
    SwipeView {
