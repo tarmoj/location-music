@@ -1,12 +1,10 @@
 import asyncio
 
 from bleak import BleakScanner
-from bleak.backends.device import BLEDevice
-from bleak.backends.scanner import AdvertisementData
 
 async def scan_devices():
     devices = await BleakScanner.discover(return_adv=True)
-    for _, (device, adv_data) in devices.items():
+    for dev, (device, adv_data) in devices.items():
         name = (device.name or getattr(adv_data, "local_name", "") or "").lower()
         #print(f"Device: {device}, data: {adv_data}")
         if name.startswith("meeblue"):

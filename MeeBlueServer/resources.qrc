@@ -1,0 +1,8 @@
+<RCC>
+    <qresource prefix="/">
+        <file>qtquickcontrols2.conf</file>
+        <file>images/menu.svg</file>
+        <file>images/M.png</file>
+        <file>images/info.svg</file>
+    </qresource>
+</RCC>

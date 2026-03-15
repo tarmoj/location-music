@@ -1,6 +1,7 @@
 from bleak import BleakScanner
 
 def parse_meeblue_data(advertisement_data):
+    print("Advertisement Data:", advertisement_data)
     if advertisement_data is None:
         return
     # advertisement_data may be an AdvertisementData object (has .manufacturer_data)
