@@ -1,0 +1,3 @@
+[submodule "MeeBlueReader"]
+	path = MeeBlueReader
+	url = https://github.com/tarmoj/MeeBlueReader.git
