@@ -12,9 +12,8 @@ ApplicationWindow {
    width: 800
    height: 600
    visible: true
-   title: qsTr("Meeblue Server")
-   color: Material.background
-
+   property string version: "0.1.0"
+   title: qsTr("Meeblue Server " + version)
    Settings {
 
    }
@@ -144,22 +143,19 @@ ApplicationWindow {
          }
       }
 
+      var entry = {
+         userId: userId,
+         userName: userName,
+         strongestStation: strongestStation,
+         stations: stations
+      }
+
       if (existingIndex === -1) {
-         usersModel.append({
-            userId: userId,
-            userName: userName,
-            strongestStation: strongestStation,
-            stations: stations
-         })
+         usersModel.append(entry)
       } else {
-         usersModel.set(existingIndex, {
-            userId: userId,
-            userName: userName,
-            strongestStation: strongestStation,
-            stations: stations
-         })
-         // Workaround: explicitly reassign var role to trigger delegate refresh
-         usersModel.setProperty(existingIndex, "stations", stations)
+         // remove + insert at same index: forces Repeater to recreate with fresh var role data
+         usersModel.remove(existingIndex)
+         usersModel.insert(existingIndex, entry)
       }
 
       // Change detection — OSC hook-in point
@@ -198,7 +194,7 @@ ApplicationWindow {
             processMessage(message)
          })
       }
-      onErrorStringChanged: {
+      onErrorStringChanged: function(errorString) {
          console.log(qsTr("Server error: %1").arg(errorString));
       }
    }
@@ -212,6 +208,15 @@ ApplicationWindow {
       Page {
          padding: 8
 
+         background: Rectangle {
+            gradient: Gradient {
+               GradientStop { position: 0.0; color: Material.backgroundColor }
+               GradientStop { position: 0.6; color: Material.backgroundColor }
+               GradientStop { position: 0.8; color: "#1a4d1a" }
+               GradientStop { position: 1.0; color: "#0a2e0a" }
+            }
+         }
+
          ColumnLayout {
             anchors.fill: parent
             spacing: 10
@@ -220,6 +225,7 @@ ApplicationWindow {
 
             ListView {
                Layout.fillWidth: true
+               Layout.fillHeight: true
                model: usersModel
                spacing: 4
                clip: true
@@ -278,6 +284,15 @@ ApplicationWindow {
       }
 
       Page {
+         background: Rectangle {
+            gradient: Gradient {
+               GradientStop { position: 0.0; color: Material.backgroundColor }
+               GradientStop { position: 0.6; color: Material.backgroundColor }
+               GradientStop { position: 0.8; color: "#1a4d1a" }
+               GradientStop { position: 1.0; color: "#0a2e0a" }
+            }
+         }
+
          Label {
             anchors.centerIn: parent
             text: qsTr("Secondary View")
