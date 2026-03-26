@@ -1,3 +1,6 @@
 [submodule "MeeBlueReader"]
 	path = MeeBlueReader
 	url = https://github.com/tarmoj/MeeBlueReader.git
+[submodule "MeeBlueServer/qosc"]
+	path = MeeBlueServer/qosc
+	url = https://github.com/tarmoj/qosc

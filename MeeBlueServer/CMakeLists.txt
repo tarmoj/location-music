@@ -4,7 +4,7 @@ project(MeeBlueServer VERSION 0.1 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-find_package(Qt6 REQUIRED COMPONENTS Quick WebSockets Core)
+find_package(Qt6 REQUIRED COMPONENTS Quick WebSockets Core Network)
 
 qt_standard_project_setup(REQUIRES 6.8)
 
@@ -19,6 +19,12 @@ qt_add_qml_module(appMeeBlueServer
     VERSION 1.0
     QML_FILES
         Main.qml
+    SOURCES
+        osclient.h osclient.cpp
+        qosc/QOsc_global.h
+        qosc/qosctypes.h qosc/qosctypes.cpp
+        qosc/qoscclient.h qosc/qoscclient.cpp
+        qosc/qoscserver.h qosc/qoscserver.cpp
         RESOURCES resources.qrc
 )
 
@@ -43,7 +49,7 @@ target_link_libraries(appMeeBlueServer PRIVATE
     Qt6::Quick
     Qt6::WebSockets
     Qt6::Core
-
+    Qt6::Network
 )
 
 if (APPLE)

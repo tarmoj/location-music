@@ -12,10 +12,12 @@ ApplicationWindow {
    width: 800
    height: 600
    visible: true
-   property string version: "0.1.0"
+   property string version: "0.2.0"
    title: qsTr("Meeblue Server " + version)
    Settings {
-
+      id: settings
+      property string oscHost: "127.0.0.1"
+      property int oscPort: 9000
    }
 
    header: ToolBar {
@@ -158,20 +160,13 @@ ApplicationWindow {
          usersModel.insert(existingIndex, entry)
       }
 
-      // Change detection — OSC hook-in point
+      // Change detection — send OSC on any change
       var prevUser = previousStations[userId] || {}
       for (var j = 0; j < stations.length; j++) {
          var s = stations[j]
          var prev = prevUser[s.stationId] || {}
-         if (prev.rssi !== undefined && prev.rssi !== s.rssi) {
-            console.log("CHANGED rssi user", userId, "station", s.stationId,
-                        prev.rssi, "->", s.rssi)
-            // TODO: send OSC message here (userId, stationId, "rssi", s.rssi)
-         }
-         if (prev.proximity !== undefined && prev.proximity !== s.proximity) {
-            console.log("CHANGED proximity user", userId, "station", s.stationId,
-                        prev.proximity, "->", s.proximity)
-            // TODO: send OSC message here (userId, stationId, "proximity", s.proximity)
+         if (prev.rssi !== s.rssi || prev.proximity !== s.proximity) {
+            oscClient.sendMessage("/meeblue", [parseInt(userId), s.stationId, s.rssi, s.proximity])
          }
          prevUser[s.stationId] = {rssi: s.rssi, proximity: s.proximity}
       }
@@ -180,6 +175,12 @@ ApplicationWindow {
 
    Component.onCompleted: {
       console.log("Server started and listening")
+   }
+
+   OscClient {
+      id: oscClient
+      host: settings.oscHost
+      port: settings.oscPort
    }
 
    WebSocketServer {
@@ -221,7 +222,11 @@ ApplicationWindow {
             anchors.fill: parent
             spacing: 10
 
-            Label { text: qsTr("Station info")}
+            RowLayout {
+               spacing: 10
+               Label { text: qsTr("Station info")}
+               ToolButton { text:qsTr("Clear"); onClicked: usersModel.clear()   }
+            }
 
             ListView {
                Layout.fillWidth: true
@@ -284,6 +289,9 @@ ApplicationWindow {
       }
 
       Page {
+
+         padding: 8
+
          background: Rectangle {
             gradient: Gradient {
                GradientStop { position: 0.0; color: Material.backgroundColor }
@@ -293,12 +301,64 @@ ApplicationWindow {
             }
          }
 
-         Label {
-            anchors.centerIn: parent
-            text: qsTr("Secondary View")
-            font.pointSize: 18
-            font.bold: true
+         ColumnLayout {
+            anchors.fill: parent
+            spacing: 10
+
+            Label {
+               text: qsTr("Settings")
+               font.pointSize: 18
+               font.bold: true
+            }
+
+
+            Flow {
+                id: serverRow
+                Layout.fillWidth: true
+                spacing: 5
+
+                Label {
+                    height: serverIPTextField.height
+                    text: qsTr("OSC server IP:")
+                    verticalAlignment: Text.AlignVCenter
+                }
+                TextField {
+                    id: serverIPTextField
+                    width: 165
+                    text: settings.oscHost
+                }
+
+                Label {
+                    height: serverPortSpinBox.height
+                    verticalAlignment: Text.AlignVCenter
+                    text: qsTr("Port:")
+                }
+                SpinBox {
+                    id: serverPortSpinBox
+                    width: 80
+                    up.indicator:   Item { width: 0 }
+                    down.indicator: Item { width: 0 }
+                    from: 1024
+                    to: 65535
+                    editable: true
+                    value: settings.oscPort
+                }
+
+                Button {
+                    id: updateButton
+                    text: qsTr("Update")
+                    onClicked: {
+                        settings.oscHost = serverIPTextField.text
+                        settings.oscPort = serverPortSpinBox.value
+                    }
+                }
+            }
+
+
+            Item {Layout.fillHeight: true }
          }
+
+
       }
    }
 }
