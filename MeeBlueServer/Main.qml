@@ -12,7 +12,7 @@ ApplicationWindow {
    width: 800
    height: 600
    visible: true
-   property string version: "0.2.1"
+   property string version: "0.3.0"
    title: qsTr("Meeblue Server " + version)
    Settings {
       id: settings
@@ -123,9 +123,16 @@ ApplicationWindow {
    // Plain JS map for programmatic access: usersData[userId] = stations array
    property var usersData: ({})
 
+   property bool manualMode: false
+
    // One entry per userId: {userId, userName, strongestStation, stations: [...]}
    ListModel {
       id: usersModel
+   }
+
+   // One entry per station for meter display: {stationId: string, value: real 0..1}
+   ListModel {
+      id: stationMetersModel
    }
 
    function processMessage(message) {
@@ -169,37 +176,75 @@ ApplicationWindow {
       usersData[userId] = stations
    }
 
-   function sendStationMeans() {
-      var stationSums = {}
-      var stationCounts = {}
-
-      for (var userId in usersData) {
-         var stns = usersData[userId]
-         for (var j = 0; j < stns.length; j++) {
-            var s = stns[j]
-            if (stationSums[s.stationId] === undefined) {
-               stationSums[s.stationId] = 0
-               stationCounts[s.stationId] = 0
-            }
-            stationSums[s.stationId] += s.rssi
-            stationCounts[s.stationId]++
-         }
+   function stationMeterIndex(stationId) {
+      for (var i = 0; i < stationMetersModel.count; i++) {
+         if (stationMetersModel.get(i).stationId === stationId) return i
       }
+      return -1
+   }
 
-      for (var stationId in stationSums) {
-         var meanRssi = stationSums[stationId] / stationCounts[stationId]
-         var normalised = Math.max(0.0, Math.min(1.0, (meanRssi - minRssi) / (maxRssi - minRssi)))
-         normalised = Math.round(normalised * 1000) / 1000  // 3 decimal places
-         if (previousMeans[stationId] !== normalised) {
-            console.log("Station", stationId, "mean RSSI:", meanRssi.toFixed(1), "normalised:", normalised) 
-            oscClient.sendMessage("/vcs/station" + stationId, [normalised])
-            previousMeans[stationId] = normalised
+   function sendStationMeans() {
+      if (!manualMode) {
+         var stationSums = {}
+         var stationCounts = {}
+
+         for (var userId in usersData) {
+            var stns = usersData[userId]
+            for (var j = 0; j < stns.length; j++) {
+               var s = stns[j]
+               if (stationSums[s.stationId] === undefined) {
+                  stationSums[s.stationId] = 0
+                  stationCounts[s.stationId] = 0
+               }
+               stationSums[s.stationId] += s.rssi
+               stationCounts[s.stationId]++
+            }
+         }
+
+         for (var stationId in stationSums) {
+            var meanRssi = stationSums[stationId] / stationCounts[stationId]
+            var normalised = Math.max(0.0, Math.min(1.0, (meanRssi - minRssi) / (maxRssi - minRssi)))
+            normalised = Math.round(normalised * 1000) / 1000
+            var idx = stationMeterIndex(stationId)
+            if (idx === -1)
+               stationMetersModel.append({stationId: stationId, value: normalised})
+            else
+               stationMetersModel.setProperty(idx, "value", normalised)
+            if (previousMeans[stationId] !== normalised) {
+               console.log("Station", stationId, "mean RSSI:", meanRssi.toFixed(1), "normalised:", normalised)
+               oscClient.sendMessage("/vcs/station" + stationId, [normalised])
+               previousMeans[stationId] = normalised
+            }
+         }
+      } else {
+         // manual mode: send directly from meter values
+         for (var m = 0; m < stationMetersModel.count; m++) {
+            var entry = stationMetersModel.get(m)
+            var val = Math.round(entry.value * 1000) / 1000
+            if (previousMeans[entry.stationId] !== val) {
+               oscClient.sendMessage("/vcs/station" + entry.stationId, [val])
+               previousMeans[entry.stationId] = val
+            }
          }
       }
    }
 
+   readonly property var defaultStationIds: ["1", "2", "3"]
+
+   function ensureDefaultMeters() {
+      for (var k = 0; k < defaultStationIds.length; k++) {
+         if (stationMeterIndex(defaultStationIds[k]) === -1)
+            stationMetersModel.append({stationId: defaultStationIds[k], value: 0.0})
+      }
+   }
+
+   onManualModeChanged: {
+      if (manualMode) ensureDefaultMeters()
+   }
+
    Component.onCompleted: {
       console.log("Server started and listening")
+      if (manualMode) ensureDefaultMeters()
    }
 
    Timer {
@@ -313,6 +358,81 @@ ApplicationWindow {
                      }
                   }
                }
+            }
+
+            Flow {
+               Layout.fillWidth: true
+               spacing: 12
+
+               Repeater {
+                  model: stationMetersModel
+
+                  delegate: Column {
+                     spacing: 4
+
+                     Rectangle {
+                        id: meterBar
+                        width: 44
+                        height: 160
+                        color: Qt.rgba(1, 1, 1, 0.08)
+                        radius: 4
+                        clip: true
+
+                        Rectangle {
+                           width: parent.width
+                           height: model.value * parent.height
+                           anchors.bottom: parent.bottom
+                           radius: 4
+                           color: model.value > 0.66 ? "#44cc44"
+                                : model.value > 0.33 ? "#ccaa00" : "#cc4444"
+                        }
+
+                        Repeater {
+                           model: [0.25, 0.5, 0.75]
+                           Rectangle {
+                              required property var modelData
+                              x: 0; width: parent.width
+                              y: (1.0 - modelData) * meterBar.height - 1
+                              height: 1
+                              color: Qt.rgba(1, 1, 1, 0.25)
+                           }
+                        }
+
+                        MouseArea {
+                           anchors.fill: parent
+                           enabled: manualMode
+                           cursorShape: manualMode ? Qt.SizeVerCursor : Qt.ArrowCursor
+                           onPressed:         setVal(mouseY)
+                           onPositionChanged: if (pressed) setVal(mouseY)
+                           function setVal(y) {
+                              var v = 1.0 - y / meterBar.height
+                              stationMetersModel.setProperty(
+                                 index, "value", Math.max(0.0, Math.min(1.0, v)))
+                           }
+                        }
+                     }
+
+                     Label {
+                        text: model.stationId
+                        width: 44
+                        horizontalAlignment: Text.AlignHCenter
+                        font.pointSize: 9
+                     }
+
+                     Label {
+                        text: model.value.toFixed(2)
+                        width: 44
+                        horizontalAlignment: Text.AlignHCenter
+                        font.pointSize: 9
+                        color: Material.accent
+                     }
+                  }
+               }
+            }
+            CheckBox {
+               text: qsTr("Manual")
+               checked: manualMode
+               onCheckedChanged: manualMode = checked
             }
 
             Item {Layout.fillHeight: true}
