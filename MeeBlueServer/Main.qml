@@ -169,35 +169,25 @@ ApplicationWindow {
       usersData[userId] = stations
    }
 
-   function proximityWeight(proximity) {
-      switch (proximity) {
-         case "immediate": return 4
-         case "near":      return 3
-         case "far":       return 2
-         default:          return 1
-      }
-   }
-
    function sendStationMeans() {
       var stationSums = {}
-      var stationWeights = {}
+      var stationCounts = {}
 
       for (var userId in usersData) {
          var stns = usersData[userId]
          for (var j = 0; j < stns.length; j++) {
             var s = stns[j]
-            var w = proximityWeight(s.proximity)
             if (stationSums[s.stationId] === undefined) {
                stationSums[s.stationId] = 0
-               stationWeights[s.stationId] = 0
+               stationCounts[s.stationId] = 0
             }
-            stationSums[s.stationId] += s.rssi * w
-            stationWeights[s.stationId] += w
+            stationSums[s.stationId] += s.rssi
+            stationCounts[s.stationId]++
          }
       }
 
       for (var stationId in stationSums) {
-         var meanRssi = stationSums[stationId] / stationWeights[stationId]
+         var meanRssi = stationSums[stationId] / stationCounts[stationId]
          var normalised = Math.max(0.0, Math.min(1.0, (meanRssi - minRssi) / (maxRssi - minRssi)))
          normalised = Math.round(normalised * 1000) / 1000  // 3 decimal places
          if (previousMeans[stationId] !== normalised) {
@@ -314,7 +304,7 @@ ApplicationWindow {
 
                         Label {
                            required property var modelData
-                           text: modelData.stationId + ": " + modelData.rssi + " " + modelData.proximity
+                           text: modelData.stationId + ": " + modelData.rssi
                            font.pointSize: 11
                            font.bold: modelData.stationId === strongestStation
                            color: modelData.stationId === strongestStation
