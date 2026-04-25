@@ -6,7 +6,7 @@
 OscClient::OscClient(QObject *parent)
     : QObject(parent)
     , m_host(QStringLiteral("127.0.0.1"))
-    , m_port(9000)
+    , m_port(8000)
 {
     recreateClient();
 }

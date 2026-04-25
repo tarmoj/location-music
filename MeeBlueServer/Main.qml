@@ -12,12 +12,12 @@ ApplicationWindow {
    width: 800
    height: 600
    visible: true
-   property string version: "0.2.0"
+   property string version: "0.2.1"
    title: qsTr("Meeblue Server " + version)
    Settings {
       id: settings
       property string oscHost: "127.0.0.1"
-      property int oscPort: 9000
+      property int oscPort: 8000
    }
 
    header: ToolBar {
@@ -114,8 +114,14 @@ ApplicationWindow {
       }
    }
 
-   // Per-user data: keyed as previousStations[userId][stationId] = {rssi, proximity}
-   property var previousStations: ({})
+   readonly property real minRssi: -80
+   readonly property real maxRssi: -40
+
+   // Keyed as previousMeans[stationId] = normalised 0..1 value
+   property var previousMeans: ({})
+
+   // Plain JS map for programmatic access: usersData[userId] = stations array
+   property var usersData: ({})
 
    // One entry per userId: {userId, userName, strongestStation, stations: [...]}
    ListModel {
@@ -160,21 +166,57 @@ ApplicationWindow {
          usersModel.insert(existingIndex, entry)
       }
 
-      // Change detection — send OSC on any change
-      var prevUser = previousStations[userId] || {}
-      for (var j = 0; j < stations.length; j++) {
-         var s = stations[j]
-         var prev = prevUser[s.stationId] || {}
-         if (prev.rssi !== s.rssi || prev.proximity !== s.proximity) {
-            oscClient.sendMessage("/meeblue", [parseInt(userId), s.stationId, s.rssi, s.proximity])
-         }
-         prevUser[s.stationId] = {rssi: s.rssi, proximity: s.proximity}
+      usersData[userId] = stations
+   }
+
+   function proximityWeight(proximity) {
+      switch (proximity) {
+         case "immediate": return 4
+         case "near":      return 3
+         case "far":       return 2
+         default:          return 1
       }
-      previousStations[userId] = prevUser
+   }
+
+   function sendStationMeans() {
+      var stationSums = {}
+      var stationWeights = {}
+
+      for (var userId in usersData) {
+         var stns = usersData[userId]
+         for (var j = 0; j < stns.length; j++) {
+            var s = stns[j]
+            var w = proximityWeight(s.proximity)
+            if (stationSums[s.stationId] === undefined) {
+               stationSums[s.stationId] = 0
+               stationWeights[s.stationId] = 0
+            }
+            stationSums[s.stationId] += s.rssi * w
+            stationWeights[s.stationId] += w
+         }
+      }
+
+      for (var stationId in stationSums) {
+         var meanRssi = stationSums[stationId] / stationWeights[stationId]
+         var normalised = Math.max(0.0, Math.min(1.0, (meanRssi - minRssi) / (maxRssi - minRssi)))
+         normalised = Math.round(normalised * 1000) / 1000  // 3 decimal places
+         if (previousMeans[stationId] !== normalised) {
+            console.log("Station", stationId, "mean RSSI:", meanRssi.toFixed(1), "normalised:", normalised) 
+            oscClient.sendMessage("/vcs/station" + stationId, [normalised])
+            previousMeans[stationId] = normalised
+         }
+      }
    }
 
    Component.onCompleted: {
       console.log("Server started and listening")
+   }
+
+   Timer {
+      interval: 500
+      repeat: true
+      running: true // ;usersModel.count > 0
+      onTriggered: sendStationMeans()
    }
 
    OscClient {
