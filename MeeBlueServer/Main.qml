@@ -12,7 +12,7 @@ ApplicationWindow {
    width: 800
    height: 600
    visible: true
-   property string version: "0.3.1"
+   property string version: "0.3.2"
    title: qsTr("Meeblue Server " + version)
    Settings {
       id: settings
@@ -123,6 +123,9 @@ ApplicationWindow {
    // Plain JS map for programmatic access: usersData[userId] = stations array
    property var usersData: ({})
 
+   // Maps webSocket.toString() key -> userId, so disconnects can clean up
+   property var socketToUser: ({})
+
    property bool manualMode: false
 
    // One entry per userId: {userId, userName, strongestStation, stations: [...]}
@@ -135,7 +138,7 @@ ApplicationWindow {
       id: stationMetersModel
    }
 
-   function processMessage(message) {
+   function processMessage(message, socketKey) {
       var data
       try {
          data = JSON.parse(message)
@@ -174,6 +177,21 @@ ApplicationWindow {
       }
 
       usersData[userId] = stations
+
+      // Register socket → userId on first message from this socket
+      if (socketKey !== undefined && socketToUser[socketKey] === undefined)
+         socketToUser[socketKey] = userId
+   }
+
+   function removeUser(userId) {
+      for (var i = 0; i < usersModel.count; i++) {
+         if (usersModel.get(i).userId === userId) {
+            usersModel.remove(i)
+            break
+         }
+      }
+      delete usersData[userId]
+      console.log("User removed on disconnect:", userId)
    }
 
    function stationMeterIndex(stationId) {
@@ -268,8 +286,19 @@ ApplicationWindow {
 
       onClientConnected: function(webSocket) {
          console.log("Client connected:", webSocket)
+         var socketKey = webSocket.toString()
          webSocket.onTextMessageReceived.connect(function(message) {
-            processMessage(message)
+            processMessage(message, socketKey)
+         })
+         webSocket.statusChanged.connect(function() {
+            if (webSocket.status === WebSocket.Closed) {
+               var userId = socketToUser[socketKey]
+               if (userId !== undefined) {
+                  removeUser(userId)
+                  delete socketToUser[socketKey]
+               }
+               console.log("Client disconnected:", socketKey)
+            }
          })
       }
       onErrorStringChanged: function(errorString) {
