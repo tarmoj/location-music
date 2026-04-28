@@ -12,7 +12,7 @@ ApplicationWindow {
    width: 800
    height: 600
    visible: true
-   property string version: "0.3.0"
+   property string version: "0.3.1"
    title: qsTr("Meeblue Server " + version)
    Settings {
       id: settings
@@ -212,7 +212,7 @@ ApplicationWindow {
                stationMetersModel.setProperty(idx, "value", normalised)
             if (previousMeans[stationId] !== normalised) {
                console.log("Station", stationId, "mean RSSI:", meanRssi.toFixed(1), "normalised:", normalised)
-               oscClient.sendMessage("/vcs/station" + stationId, [normalised])
+               oscClient.sendMessage("/vcs/station" + stationId + "/1", [normalised])
                previousMeans[stationId] = normalised
             }
          }
@@ -222,7 +222,7 @@ ApplicationWindow {
             var entry = stationMetersModel.get(m)
             var val = Math.round(entry.value * 1000) / 1000
             if (previousMeans[entry.stationId] !== val) {
-               oscClient.sendMessage("/vcs/station" + entry.stationId, [val])
+               oscClient.sendMessage("/vcs/station" + entry.stationId + "/1", [val])
                previousMeans[entry.stationId] = val
             }
          }
