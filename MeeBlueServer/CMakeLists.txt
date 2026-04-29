@@ -63,7 +63,7 @@ if (APPLE)
         MACOSX_PACKAGE_LOCATION Resources
     )
     set_target_properties(appMeeBlueServer PROPERTIES
-        MACOSX_BUNDLE_ICON_FILE M
+        MACOSX_BUNDLE_ICON_FILE M.png
     )
 
 endif()

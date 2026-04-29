@@ -11,8 +11,8 @@ int main(int argc, char *argv[])
     app.setOrganizationDomain("meeblue-server.org");
     app.setApplicationName("MeeBlue Server");
 
-#if defined(Q_OS_LINUX)
-    app.setWindowIcon(QIcon(":/images/M.png"));
+#if !defined(Q_OS_ANDROID) && !defined(Q_OS_IOS)
+    app.setWindowIcon(QIcon(QStringLiteral(":/images/M.png")));
 #endif
 
     QQmlApplicationEngine engine;
