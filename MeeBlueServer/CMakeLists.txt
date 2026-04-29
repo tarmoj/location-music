@@ -57,10 +57,14 @@ if (APPLE)
     set(MACOSX_BUNDLE_GUI_IDENTIFIER "org.tarmoj.meeblueserver")
     set(MACOSX_BUNDLE_BUNDLE_NAME "Meeblue Server")
 
-    # set_target_properties(appMeeBlueReader PROPERTIES
-    #     MACOSX_BUNDLE_INFO_PLIST "${CMAKE_SOURCE_DIR}/Info.plist"
-    # )
-
+    # Copy M.png into the macOS bundle Resources and declare it as the icon
+    target_sources(appMeeBlueServer PRIVATE "${CMAKE_SOURCE_DIR}/images/M.png")
+    set_source_files_properties("${CMAKE_SOURCE_DIR}/images/M.png" PROPERTIES
+        MACOSX_PACKAGE_LOCATION Resources
+    )
+    set_target_properties(appMeeBlueServer PROPERTIES
+        MACOSX_BUNDLE_ICON_FILE M
+    )
 
 endif()
 
