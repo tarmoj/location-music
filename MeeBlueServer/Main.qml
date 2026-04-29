@@ -221,6 +221,7 @@ ApplicationWindow {
 
          for (var stationId in stationSums) {
             var meanRssi = stationSums[stationId] / stationCounts[stationId]
+            if (meanRssi === 0) meanRssi = minRssi   // treat 0 as "no signal", i.e. minimum
             var normalised = Math.max(0.0, Math.min(1.0, (meanRssi - minRssi) / (maxRssi - minRssi)))
             normalised = Math.round(normalised * 1000) / 1000
             var idx = stationMeterIndex(stationId)
