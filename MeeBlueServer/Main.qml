@@ -12,7 +12,7 @@ ApplicationWindow {
    width: 800
    height: 600
    visible: true
-   property string version: "0.3.2"
+   property string version: "0.3.3"
    title: qsTr("Meeblue Server " + version)
    Settings {
       id: settings
@@ -192,6 +192,15 @@ ApplicationWindow {
       }
       delete usersData[userId]
       console.log("User removed on disconnect:", userId)
+
+      if (Object.keys(usersData).length === 0) {
+         for (var j = 0; j < stationMetersModel.count; j++) {
+            var stationId = stationMetersModel.get(j).stationId
+            stationMetersModel.setProperty(j, "value", 0.0)
+            oscClient.sendMessage("/vcs/station" + stationId + "/1", [0.0])
+         }
+         previousMeans = {}
+      }
    }
 
    function stationMeterIndex(stationId) {
