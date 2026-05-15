@@ -21,6 +21,7 @@ qt_add_qml_module(appMeeBlueServer
         Main.qml
     SOURCES
         osclient.h osclient.cpp
+        networkinfo.h networkinfo.cpp
         qosc/QOsc_global.h
         qosc/qosctypes.h qosc/qosctypes.cpp
         qosc/qoscclient.h qosc/qoscclient.cpp

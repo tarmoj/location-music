@@ -6,13 +6,14 @@ import QtQuick.Layouts
 import QtQuick.Dialogs
 import QtCore
 import QtWebSockets
+import MeeBlueServer
 
 ApplicationWindow {
    id: app
    width: 800
    height: 600
    visible: true
-   property string version: "0.3.3"
+   property string version: "0.3.4"
    title: qsTr("Meeblue Server " + version)
    Settings {
       id: settings
@@ -288,6 +289,10 @@ ApplicationWindow {
       port: settings.oscPort
    }
 
+   NetworkInfo {
+      id: networkInfo
+   }
+
    WebSocketServer {
       id: server
       listen: true
@@ -339,9 +344,12 @@ ApplicationWindow {
             spacing: 10
 
             RowLayout {
+               id: stationInfoRow
                spacing: 10
+               Label { text: qsTr("Server IP: ") + networkInfo.localIp; color: Material.accent }
                Label { text: qsTr("Station info")}
                ToolButton { text:qsTr("Clear"); onClicked: usersModel.clear()   }
+
             }
 
             ListView {
