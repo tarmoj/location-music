@@ -14,7 +14,7 @@ ApplicationWindow {
    height: 600
    visible: true
    property string version: "0.3.4"
-   title: qsTr("Meeblue Server " + version)
+   title: qsTr("Me Tulime Server " + version)
    Settings {
       id: settings
       property string oscHost: "127.0.0.1"
@@ -100,7 +100,7 @@ ApplicationWindow {
       buttons: MessageDialog.Ok
 
       text: qsTr(`
-                 MeeBlue Server
+                 MeTulimeServer
 
                  More info comes here.
                  Built using Qt framework.

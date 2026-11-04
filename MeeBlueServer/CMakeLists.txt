@@ -56,7 +56,7 @@ target_link_libraries(appMeeBlueServer PRIVATE
 if (APPLE)
 
     set(MACOSX_BUNDLE_GUI_IDENTIFIER "org.tarmoj.meeblueserver")
-    set(MACOSX_BUNDLE_BUNDLE_NAME "Meeblue Server")
+    set(MACOSX_BUNDLE_BUNDLE_NAME "MeTulimeServer")
 
     # Copy M.png into the macOS bundle Resources and declare it as the icon
     target_sources(appMeeBlueServer PRIVATE "${CMAKE_SOURCE_DIR}/images/M.png")
