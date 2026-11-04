@@ -380,13 +380,8 @@ ApplicationWindow {
                      spacing: 10
 
                      Label {
-                        text: model.userId
-                        font.bold: true
-                        font.pointSize: 11
-                     }
-
-                     Label {
                         text: model.userName
+                        font.bold: true
                         font.pointSize: 11
                         color: Material.accent
                      }
