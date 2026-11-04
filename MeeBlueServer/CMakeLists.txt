@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
 
-project(MeeBlueServer VERSION 0.1 LANGUAGES CXX)
+project(MeeBlueServer VERSION 0.3.4 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
@@ -41,10 +41,12 @@ qt_add_resources(appMeeBlueServer "conf"
 set_target_properties(appMeeBlueServer PROPERTIES
     #MACOSX_BUNDLE_GUI_IDENTIFIER org.tarmoj.appMeeBlueServer
     MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION}
-    MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}
+    MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION}
     MACOSX_BUNDLE TRUE
     WIN32_EXECUTABLE TRUE
 )
+
+target_compile_definitions(appMeeBlueServer PRIVATE APP_VERSION="${PROJECT_VERSION}")
 
 target_link_libraries(appMeeBlueServer PRIVATE
     Qt6::Quick

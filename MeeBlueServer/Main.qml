@@ -13,7 +13,7 @@ ApplicationWindow {
    width: 800
    height: 600
    visible: true
-   property string version: "0.3.4"
+   property string version: Qt.application.version
    title: qsTr("Me Tulime Server " + version)
    Settings {
       id: settings

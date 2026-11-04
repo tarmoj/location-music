@@ -10,6 +10,7 @@ int main(int argc, char *argv[])
     app.setOrganizationName("Tarmo Johannes Events and Software");
     app.setOrganizationDomain("meeblue-server.org");
     app.setApplicationName("MeeBlue Server");
+    app.setApplicationVersion(QStringLiteral(APP_VERSION));
 
 #if !defined(Q_OS_ANDROID) && !defined(Q_OS_IOS)
     app.setWindowIcon(QIcon(QStringLiteral(":/images/M.png")));
