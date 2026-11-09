@@ -35,22 +35,9 @@ void OscClient::sendMessage(const QString &path, const QVariantList &args)
 {
     if (!m_client)
         return;
-    // QML passes JS numbers as QVariant(double). QOsc only produces 'i'
-    // for QMetaType::Int, so coerce whole-number doubles to int.
-    QVariantList coerced;
-    coerced.reserve(args.size());
-    for (const QVariant &v : args) {
-        if (v.typeId() == QMetaType::Double) {
-            double d = v.toDouble();
-            if (d == std::floor(d))
-                coerced.append(QVariant(static_cast<int>(d)));
-            else
-                coerced.append(v);
-        } else {
-            coerced.append(v);
-        }
-    }
-    m_client->sendData(path, coerced);
+    // QML passes JS numbers as QVariant(double), which QOsc sends as 'f' (float32).
+    // Numbers are deliberately not converted to int, so 0 and 1 also go out as floats.
+    m_client->sendData(path, args);
 }
 
 void OscClient::recreateClient()

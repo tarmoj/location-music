@@ -198,10 +198,16 @@ ApplicationWindow {
          for (var j = 0; j < stationMetersModel.count; j++) {
             var stationId = stationMetersModel.get(j).stationId
             stationMetersModel.setProperty(j, "value", 0.0)
-            oscClient.sendMessage("/vcs/station" + stationId + "/1", [0.0])
+            sendStationValue(stationId, 0.0)
          }
          previousMeans = {}
       }
+   }
+
+   // Sends a station's level (0..1) to both OSC addresses: /vcs/station<N>/1 and /vcs/station<N>_/1
+   function sendStationValue(stationId, value) {
+      oscClient.sendMessage("/vcs/station" + stationId + "/1", [value])
+      oscClient.sendMessage("/vcs/station" + stationId + "_/1", [value])
    }
 
    function stationMeterIndex(stationId) {
@@ -241,7 +247,7 @@ ApplicationWindow {
                stationMetersModel.setProperty(idx, "value", normalised)
             if (previousMeans[stationId] !== normalised) {
                console.log("Station", stationId, "mean RSSI:", meanRssi.toFixed(1), "normalised:", normalised)
-               oscClient.sendMessage("/vcs/station" + stationId + "/1", [normalised])
+               sendStationValue(stationId, normalised)
                previousMeans[stationId] = normalised
             }
          }
@@ -251,7 +257,7 @@ ApplicationWindow {
             var entry = stationMetersModel.get(m)
             var val = Math.round(entry.value * 1000) / 1000
             if (previousMeans[entry.stationId] !== val) {
-               oscClient.sendMessage("/vcs/station" + entry.stationId + "/1", [val])
+               sendStationValue(entry.stationId, val)
                previousMeans[entry.stationId] = val
             }
          }
