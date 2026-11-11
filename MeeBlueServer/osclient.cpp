@@ -35,9 +35,32 @@ void OscClient::sendMessage(const QString &path, const QVariantList &args)
 {
     if (!m_client)
         return;
-    // QML passes JS numbers as QVariant(double), which QOsc sends as 'f' (float32).
-    // Numbers are deliberately not converted to int, so 0 and 1 also go out as floats.
-    m_client->sendData(path, args);
+
+    QVariantList floatArgs;
+    floatArgs.reserve(args.size());
+    for (const QVariant &arg : args) {
+        switch (arg.typeId()) {
+        case QMetaType::Char:
+        case QMetaType::SChar:
+        case QMetaType::UChar:
+        case QMetaType::Short:
+        case QMetaType::UShort:
+        case QMetaType::Int:
+        case QMetaType::UInt:
+        case QMetaType::Long:
+        case QMetaType::ULong:
+        case QMetaType::LongLong:
+        case QMetaType::ULongLong:
+        case QMetaType::Float:
+            floatArgs.append(arg.toDouble());
+            break;
+        default:
+            floatArgs.append(arg);
+            break;
+        }
+    }
+
+    m_client->sendData(path, floatArgs);
 }
 
 void OscClient::recreateClient()

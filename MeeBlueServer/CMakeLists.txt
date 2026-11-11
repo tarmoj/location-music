@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
 
-project(MeeBlueServer VERSION 0.4.2 LANGUAGES CXX)
+project(MeeBlueServer VERSION 0.4.3 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
