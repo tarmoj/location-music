@@ -19,6 +19,7 @@ ApplicationWindow {
       id: settings
       property string oscHost: "127.0.0.1"
       property int oscPort: 8000
+      property string oscFormat: "/Station{number} {value}"
    }
 
    header: ToolBar {
@@ -204,10 +205,28 @@ ApplicationWindow {
       }
    }
 
-   // Sends a station's level (0..1) to both OSC addresses: /vcs/station<N>/1 and /vcs/station<N>_/1
+   // Sends a station's level (0..1) according to settings.oscFormat.
+   // {number} is replaced by the station id, {value} by the level.
+   // First whitespace-separated token is the OSC path, the rest are arguments.
    function sendStationValue(stationId, value) {
-      oscClient.sendMessage("/vcs/station" + stationId + "/1", [value])
-      oscClient.sendMessage("/vcs/station" + stationId + "_/1", [value])
+      var formatted = settings.oscFormat.split("{number}").join(stationId).trim()
+      var tokens = formatted.split(/\s+/)
+      var path = tokens[0]
+      if (!path || path.charAt(0) !== "/") {
+         console.warn("Invalid OSC format, path must start with '/':", settings.oscFormat)
+         return
+      }
+      var args = []
+      for (var i = 1; i < tokens.length; i++) {
+         var t = tokens[i]
+         if (t === "{value}")
+            args.push(value)
+         else if (t !== "" && !isNaN(Number(t)))
+            args.push(Number(t))
+         else
+            args.push(t)
+      }
+      oscClient.sendMessage(path, args)
    }
 
    function stationMeterIndex(stationId) {
@@ -554,6 +573,30 @@ ApplicationWindow {
                 }
             }
 
+            Flow {
+                id: oscFormatRow
+                Layout.fillWidth: true
+                spacing: 5
+
+                Label {
+                    height: oscFormatTextField.height
+                    text: qsTr("OSC message format (use {number} for station number and {value} for value):")
+                    verticalAlignment: Text.AlignVCenter
+                }
+                TextField {
+                    id: oscFormatTextField
+                    width: 260
+                    text: settings.oscFormat
+                }
+
+                Button {
+                    text: qsTr("Update")
+                    onClicked: {
+                        settings.oscFormat = oscFormatTextField.text
+                        app.previousMeans = {}  // resend all stations in the new format
+                    }
+                }
+            }
 
             Item {Layout.fillHeight: true }
          }
