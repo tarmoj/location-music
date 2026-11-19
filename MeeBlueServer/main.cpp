@@ -1,11 +1,13 @@
-#include <QGuiApplication>
+#include <QApplication>
 #include <QIcon>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
 
 int main(int argc, char *argv[])
 {
-    QGuiApplication app(argc, argv);
+    // QApplication (not QGuiApplication) is required so Qt.labs.platform's
+    // FileDialog can fall back to the native QWidget-based file dialog.
+    QApplication app(argc, argv);
 
     app.setOrganizationName("Tarmo Johannes Events and Software");
     app.setOrganizationDomain("meeblue-server.org");

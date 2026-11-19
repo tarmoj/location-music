@@ -1,10 +1,10 @@
 cmake_minimum_required(VERSION 3.16)
 
-project(MeeBlueServer VERSION 0.5.1 LANGUAGES CXX)
+project(MeeBlueServer VERSION 0.6.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-find_package(Qt6 REQUIRED COMPONENTS Quick WebSockets Core Network)
+find_package(Qt6 REQUIRED COMPONENTS Quick WebSockets Core Network LabsPlatform Widgets)
 
 qt_standard_project_setup(REQUIRES 6.8)
 
@@ -22,6 +22,7 @@ qt_add_qml_module(appMeeBlueServer
     SOURCES
         osclient.h osclient.cpp
         networkinfo.h networkinfo.cpp
+        recorder.h recorder.cpp
         qosc/QOsc_global.h
         qosc/qosctypes.h qosc/qosctypes.cpp
         qosc/qoscclient.h qosc/qoscclient.cpp
@@ -53,6 +54,8 @@ target_link_libraries(appMeeBlueServer PRIVATE
     Qt6::WebSockets
     Qt6::Core
     Qt6::Network
+    Qt6::LabsPlatform
+    Qt6::Widgets
 )
 
 if (APPLE)

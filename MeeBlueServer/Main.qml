@@ -4,6 +4,7 @@ import QtQuick.Controls
 import QtQuick.Controls.Material
 import QtQuick.Layouts
 import QtQuick.Dialogs
+import Qt.labs.platform as Platform
 import QtCore
 import QtWebSockets
 import MeeBlueServer
@@ -15,11 +16,30 @@ ApplicationWindow {
    visible: true
    property string version: Qt.application.version
    title: qsTr("Me Tulime Server " + version)
+   property bool quitPending: false
+
+   onClosing: function(close) {
+      if (recorder.recording) {
+         close.accepted = false
+         recorder.stopRecording()
+         quitPending = true
+         saveRecordingDialog.open()
+      }
+   }
    Settings {
       id: settings
       property string oscHost: "127.0.0.1"
       property int oscPort: 8000
       property string oscFormat: "/Station{number} {value}"
+      property string lastRecordingFolder: ""
+   }
+
+   // Returns the containing folder (as a url string) of a file url, for
+   // remembering the last-used Load/Save directory across sessions.
+   function parentFolderUrl(fileUrl) {
+      var s = fileUrl.toString()
+      var idx = s.lastIndexOf("/")
+      return idx === -1 ? s : s.substring(0, idx)
    }
 
    header: ToolBar {
@@ -279,7 +299,7 @@ ApplicationWindow {
             else
                stationMetersModel.setProperty(idx, "value", normalised)
             if (previousMeans[stationId] !== normalised) {
-               console.log("Station", stationId, "mean RSSI:", meanRssi.toFixed(1), "normalised:", normalised)
+               //console.log("Station", stationId, "mean RSSI:", meanRssi.toFixed(1), "normalised:", normalised)
                sendStationValue(stationId, normalised)
                previousMeans[stationId] = normalised
             }
@@ -324,7 +344,7 @@ ApplicationWindow {
    Timer {
       interval: 500
       repeat: true
-      running: true // ;usersModel.count > 0
+      running: !recorder.playing // ;usersModel.count > 0
       onTriggered: sendStationMeans()
    }
 
@@ -336,6 +356,31 @@ ApplicationWindow {
 
    NetworkInfo {
       id: networkInfo
+   }
+
+   Recorder {
+      id: recorder
+      onErrorOccurred: function(message) { recorderErrorDialog.text = message; recorderErrorDialog.open() }
+      onSampleReady: function(values) {
+         for (var i = 0; i < recorder.stationIds.length; i++) {
+            var sid = recorder.stationIds[i]
+            var idx = stationMeterIndex(sid)
+            if (idx === -1) insertStationSorted(sid, values[i])
+            else stationMetersModel.setProperty(idx, "value", values[i])
+            sendStationValue(sid, values[i])   // resend every tick, no dedup
+         }
+      }
+      onCaptureRequested: {
+         var vals = []
+         for (var i = 0; i < recorder.stationIds.length; i++)
+            vals.push(stationMetersModel.get(stationMeterIndex(recorder.stationIds[i])).value)
+         recorder.appendSample(vals)
+      }
+   }
+
+   MessageDialog {
+      id: recorderErrorDialog
+      buttons: MessageDialog.Ok
    }
 
    WebSocketServer {
@@ -448,6 +493,102 @@ ApplicationWindow {
                }
             }
 
+            RowLayout {
+               Layout.fillWidth: true
+               spacing: 10
+
+               Button {
+                  text: qsTr("Load")
+                  enabled: !recorder.recording && !recorder.playing
+                  onClicked: loadRecordingDialog.open()
+               }
+
+               Button {
+                  text: recorder.playing ? qsTr("Stop") : qsTr("Play")
+                  enabled: recorder.hasFile && !recorder.recording
+                  onClicked: recorder.playing ? recorder.stop() : recorder.play()
+               }
+
+               Button {
+                  text: recorder.recording ? qsTr("Stop") : qsTr("Record")
+                  checkable: true
+                  checked: recorder.recording
+                  enabled: !recorder.playing
+                  onToggled: {
+                     if (checked) {
+                        var ids = []
+                        for (var i = 0; i < stationMetersModel.count; i++)
+                           ids.push(stationMetersModel.get(i).stationId)
+                        recorder.startRecording(ids)
+                     } else {
+                        recorder.stopRecording()
+                        saveRecordingDialog.open()
+                     }
+                  }
+               }
+
+               Label {
+                  text: {
+                     var total = Math.floor(recorder.elapsedMs / 1000)
+                     var m = Math.floor(total / 60), s = total % 60
+                     return (m < 10 ? "0" : "") + m + ":" + (s < 10 ? "0" : "") + s
+                  }
+               }
+
+               Label {
+                  text: recorder.fileName
+                  visible: recorder.fileName !== ""
+                  elide: Text.ElideMiddle
+                  Layout.maximumWidth: 150
+               }
+
+               Slider {
+                  id: seekSlider
+                  visible: recorder.playing
+                  Layout.fillWidth: true
+                  from: 0
+                  to: recorder.durationMs
+                  onPressedChanged: if (!pressed) recorder.seek(value)
+
+                  Binding {
+                     target: seekSlider
+                     property: "value"
+                     value: recorder.elapsedMs
+                     when: !seekSlider.pressed
+                  }
+               }
+            }
+
+            Platform.FileDialog {
+               id: loadRecordingDialog
+               title: qsTr("Load recording")
+               nameFilters: [qsTr("MeeBlue recordings (*.mtrec)"), qsTr("All files (*)")]
+               folder: settings.lastRecordingFolder
+               onAccepted: {
+                  settings.lastRecordingFolder = parentFolderUrl(file)
+                  if (!recorder.loadFile(file))
+                     console.warn("Failed to load recording")
+               }
+            }
+
+            Platform.FileDialog {
+               id: saveRecordingDialog
+               title: qsTr("Save recording")
+               fileMode: Platform.FileDialog.SaveFile
+               nameFilters: [qsTr("MeeBlue recordings (*.mtrec)")]
+               defaultSuffix: "mtrec"
+               folder: settings.lastRecordingFolder
+               onAccepted: {
+                  settings.lastRecordingFolder = parentFolderUrl(file)
+                  if (!recorder.saveRecording(file))
+                     console.warn("Failed to save recording")
+                  if (app.quitPending) Qt.quit()
+               }
+               onRejected: {
+                  if (app.quitPending) Qt.quit()
+               }
+            }
+
             Flow {
                Layout.fillWidth: true
                spacing: 12
@@ -488,7 +629,7 @@ ApplicationWindow {
 
                         MouseArea {
                            anchors.fill: parent
-                           enabled: manualMode
+                           enabled: manualMode && !recorder.playing
                            cursorShape: manualMode ? Qt.SizeVerCursor : Qt.ArrowCursor
                            onPressed:         setVal(mouseY)
                            onPositionChanged: if (pressed) setVal(mouseY)
