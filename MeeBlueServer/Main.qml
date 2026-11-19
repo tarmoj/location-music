@@ -236,6 +236,20 @@ ApplicationWindow {
       return -1
    }
 
+   // Keeps stationMetersModel ordered by numeric stationId (1..6), regardless
+   // of the order stations are discovered/added in.
+   function insertStationSorted(stationId, value) {
+      var num = parseInt(stationId, 10)
+      var pos = stationMetersModel.count
+      for (var i = 0; i < stationMetersModel.count; i++) {
+         if (parseInt(stationMetersModel.get(i).stationId, 10) > num) {
+            pos = i
+            break
+         }
+      }
+      stationMetersModel.insert(pos, {stationId: stationId, value: value})
+   }
+
    function sendStationMeans() {
       if (!manualMode) {
          var stationSums = {}
@@ -261,7 +275,7 @@ ApplicationWindow {
             normalised = Math.round(normalised * 1000) / 1000
             var idx = stationMeterIndex(stationId)
             if (idx === -1)
-               stationMetersModel.append({stationId: stationId, value: normalised})
+               insertStationSorted(stationId, normalised)
             else
                stationMetersModel.setProperty(idx, "value", normalised)
             if (previousMeans[stationId] !== normalised) {
@@ -283,17 +297,23 @@ ApplicationWindow {
       }
    }
 
-   readonly property var defaultStationIds: ["1", "2", "3"]
+   readonly property var defaultStationIds: ["1", "2", "3", "4", "5", "6"]
 
    function ensureDefaultMeters() {
       for (var k = 0; k < defaultStationIds.length; k++) {
          if (stationMeterIndex(defaultStationIds[k]) === -1)
-            stationMetersModel.append({stationId: defaultStationIds[k], value: 0.0})
+            insertStationSorted(defaultStationIds[k], 0.0)
       }
+   }
+
+   function resetStationMeters() {
+      for (var m = 0; m < stationMetersModel.count; m++)
+         stationMetersModel.setProperty(m, "value", 0.0)
    }
 
    onManualModeChanged: {
       if (manualMode) ensureDefaultMeters()
+      else resetStationMeters()
    }
 
    Component.onCompleted: {
