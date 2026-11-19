@@ -10,8 +10,8 @@ import MeeBlueServer
 
 ApplicationWindow {
    id: app
-   width: 800
-   height: 600
+   width: 600
+   height: 800
    visible: true
    property string version: Qt.application.version
    title: qsTr("Me Tulime Server " + version)
@@ -372,6 +372,7 @@ ApplicationWindow {
                id: stationInfoRow
                spacing: 10
                Label { text: qsTr("Server IP: ") + networkInfo.localIp; color: Material.accent }
+               Label {id: clientsLabel; text: qsTr("Clients: ") + usersModel.count; }
                Label { text: qsTr("Station info")}
                ToolButton { text:qsTr("Clear"); onClicked: usersModel.clear()   }
 
@@ -502,7 +503,6 @@ ApplicationWindow {
                onCheckedChanged: manualMode = checked
             }
 
-            Item {Layout.fillHeight: true}
 
          }
       }
